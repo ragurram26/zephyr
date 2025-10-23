@@ -11,6 +11,11 @@
 #ifndef ZEPHYR_INCLUDE_NET_HOSTNAME_H_
 #define ZEPHYR_INCLUDE_NET_HOSTNAME_H_
 
+#include <errno.h>
+
+#include <zephyr/sys/util.h>
+#include <zephyr/toolchain.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -75,6 +80,8 @@ int net_hostname_set(char *host, size_t len);
 #else
 static inline int net_hostname_set(char *host, size_t len)
 {
+	ARG_UNUSED(host);
+	ARG_UNUSED(len);
 	return -ENOTSUP;
 }
 #endif

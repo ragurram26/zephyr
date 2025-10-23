@@ -5,8 +5,7 @@ Overview
 
 The STM32H7S78-DK Discovery kit is designed as a complete demonstration and
 development platform for STMicroelectronics Arm |reg| Cortex |reg|-M7 core-based
-STM32H7S7L8H6H microcontroller with TrustZone |reg|. Here are some highlights of
-the STM32H7S78-DK Discovery board:
+STM32H7S7L8H6H microcontroller. Here are some highlights of the STM32H7S78-DK Discovery board:
 
 
 - STM32H7S7L8H6H microcontroller featuring 64Kbytes of Flash memory and 620 Kbytes of SRAM in 225-pin TFBGA package
@@ -47,16 +46,13 @@ The STM32H7S7xx devices are a high-performance microcontrollers family (STM32H7
 Series) based on the high-performance Arm |reg| Cortex |reg|-M7 32-bit RISC core.
 They operate at a frequency of up to 500 MHz.
 
-- Core: ARM |reg| 32-bit Cortex |reg| -M7 CPU with TrustZone |reg| and FPU.
+- Core: ARM |reg| 32-bit Cortex |reg| -M7 CPU with FPU.
 - Performance benchmark:
 
   - 1284 DMPIS/MHz (Dhrystone 2.1)
 
 - Security
 
-  - Arm |reg| TrustZone |reg| with ARMv8-M mainline security extension
-  - Up to 8 configurable SAU regions
-  - TrustZone |reg| aware and securable peripherals
   - Flexible lifecycle scheme with secure debug authentication
   - Preconfigured immutable root of trust (ST-iROT)
   - SFI (secure firmware installation)
@@ -66,7 +62,6 @@ They operate at a frequency of up to 500 MHz.
   - Public key accelerator, DPA resistant
   - On-the-fly decryption of Octo-SPI external memories
   - HASH hardware accelerator
-  - True random number generator, NIST SP800-90B compliant
   - 96-bit unique ID
   - Active tampers
   - True Random Number Generator (RNG) NIST SP800-90B compliant
@@ -147,42 +142,7 @@ More information about STM32H7S7 can be found here:
 Supported Features
 ==================
 
-The Zephyr STM32H7S78_DK board configuration supports the following
-hardware features:
-
-+-----------+------------+-------------------------------------+
-| Interface | Controller | Driver/Component                    |
-+===========+============+=====================================+
-| CLOCK     | on-chip    | reset and clock control             |
-+-----------+------------+-------------------------------------+
-| GPIO      | on-chip    | gpio                                |
-+-----------+------------+-------------------------------------+
-| NVIC      | on-chip    | nested vector interrupt controller  |
-+-----------+------------+-------------------------------------+
-| PINMUX    | on-chip    | pinmux                              |
-+-----------+------------+-------------------------------------+
-| RNG       | on-chip    | True Random number generator        |
-+-----------+------------+-------------------------------------+
-| UART      | on-chip    | serial port-polling;                |
-|           |            | serial port-interrupt               |
-+-----------+------------+-------------------------------------+
-| WATCHDOG  | on-chip    | independent watchdog                |
-+-----------+------------+-------------------------------------+
-| ADC       | on-chip    | ADC Controller                      |
-+-----------+------------+-------------------------------------+
-| SPI       | on-chip    | spi bus                             |
-+-----------+------------+-------------------------------------+
-| USB       | on-chip    | usb                                 |
-+-----------+------------+-------------------------------------+
-
-Other hardware features are not yet supported on this Zephyr port.
-
-The default configuration can be found in the defconfig and dts files:
-
-- Secure target:
-
-  - :zephyr_file:`boards/st/stm32h7s78_dk/stm32h7s78_dk_defconfig`
-  - :zephyr_file:`boards/st/stm32h7s78_dk/stm32h7s78_dk.dts`
+.. zephyr:board-supported-hw::
 
 Zephyr board options
 ====================
@@ -218,6 +178,8 @@ Default Zephyr Peripheral Mapping:
 - LD4 (blue) : PM3
 - ADC1 channel 6 input : PF12
 - USB OTG FS DM/DP : PM12/PM11
+- XSPI1 NCS/DQS0/DQS1/CLK/IO: PO0/PO2/PO3/PO4/PP0..15
+- I2C1 SCL/SDA: PB6/PB9
 
 System Clock
 ------------
@@ -240,6 +202,8 @@ USB port2 (FS) is supported.
 
 Programming and Debugging
 *************************
+
+.. zephyr:board-supported-runners::
 
 STM32H7S78-DK Discovery board includes an ST-LINK/V3E embedded debug tool interface.
 

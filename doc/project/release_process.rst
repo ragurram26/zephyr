@@ -61,7 +61,7 @@ sufficiently stable (and which is accepted by the maintainers and the wide commu
 merged into the mainline tree.  The bulk of changes for a new development cycle
 (and all of the major changes) will be merged during this time.
 
-The development phase lasts for approximately three months.  At the end of this time,
+The development phase lasts for approximately five months.  At the end of this time,
 the release owner will declare that the development phase is over and releases the first
 of the release candidates.  For the codebase release which is destined to be
 3.1.0, for example, the release which happens at the end of the development phase
@@ -167,9 +167,13 @@ Release Milestones
      - Review target milestones
      - Finalize target milestones for features in flight.
      - Release Engineering
-   * - T-4W
+   * - T-5W
      - Release Announcement
      - Release owner announces feature freeze and timeline for release.
+     - Release Manager
+   * - T-4W
+     - Release Timeline reminder
+     - Release owner sends a reminder of the feature freeze and timeline for release.
      - Release Manager
    * - T-3W
      - Feature Freeze (RC1)
@@ -226,7 +230,7 @@ Long Term Support (LTS)
 =======================
 
 Long-term support releases are designed to be supported and maintained
-for an extended period and is the recommended release for
+for an extended period and are the recommended release for
 products and the auditable branch used for certification.
 
 An LTS release is defined as:
@@ -235,8 +239,7 @@ An LTS release is defined as:
 - **Extended Stabilisation period**: Allow for more testing and bug fixing
 - **Stable APIs**
 - **Quality Driven Process**
-- **Long Term**: Maintained for an extended period of time (at least 2.5 years)
-  overlapping previous LTS release for at least half a year.
+- **Long Term**: Maintained for an extended period of time (at least 5 years).
 
 
 Product Focused
@@ -323,10 +326,22 @@ state of the software when it was released.
 Long Term Support and Maintenance
 ++++++++++++++++++++++++++++++++++
 
-A Zephyr LTS release is published every 2 years and is branched and maintained
-independently from the main tree for at least 2.5 years after it was
-released. Support and maintenance for an LTS release stops at least half a year
-after the following LTS release is published.
+LTS releases are published every 2.5 to 3 years and are branched and maintained independently from
+the main tree for approximately 5 years after they were released.
+
+Support is provided in three main phases:
+
+- **Phase 1 (first 2 years):** General bug fixes and security fixes, including platform and driver
+  fixes.
+- **Phase 2 (following 3+ years):** Security and OS stability fixes only.
+- **Phase 3:** Extended support may be available through third parties (details to be determined).
+
+Support for a given LTS release (LTS *N*) continues until the initial release of the LTS two
+versions ahead (LTS *N+2*). A final release of LTS *N* occurs shortly after the initial release of
+LTS *N+2*.
+
+The list of currently supported LTS releases and their EOL dates can be found
+:ref:`here <supported_releases>`.
 
 .. figure:: lts.svg
     :align: center

@@ -37,8 +37,6 @@
 
 #if defined(CONFIG_BT_BAP_UNICAST_CLIENT)
 
-#define BAP_STREAM_RETRY_WAIT K_MSEC(100)
-
 extern enum bst_result_t bst_result;
 
 static struct audio_test_stream test_streams[CONFIG_BT_BAP_UNICAST_CLIENT_ASE_SNK_COUNT];
@@ -426,7 +424,7 @@ static bool parse_ascs_ad_data(struct bt_data *data, void *user_data)
 		return false;
 	}
 
-	err = bt_conn_le_create(info->addr, BT_CONN_LE_CREATE_CONN, BT_LE_CONN_PARAM_DEFAULT,
+	err = bt_conn_le_create(info->addr, BT_CONN_LE_CREATE_CONN, BT_BAP_CONN_PARAM_RELAXED,
 				&default_conn);
 	if (err) {
 		FAIL("Could not connect to peer: %d", err);
@@ -582,7 +580,7 @@ static int codec_configure_stream(struct bt_bap_stream *stream, struct bt_bap_ep
 
 		err = bt_bap_stream_config(default_conn, stream, ep, codec_cfg);
 		if (err == -EBUSY) {
-			k_sleep(BAP_STREAM_RETRY_WAIT);
+			k_sleep(BAP_RETRY_WAIT);
 		} else if (err != 0) {
 			FAIL("Could not configure stream %p: %d\n", stream, err);
 			return err;
@@ -625,6 +623,7 @@ static void codec_configure_streams(size_t stream_cnt)
 static void qos_configure_streams(struct bt_bap_unicast_group *unicast_group,
 				  size_t stream_cnt)
 {
+	struct bt_bap_unicast_group_info info;
 	int err;
 
 	UNSET_FLAG(flag_stream_qos_configured);
@@ -632,7 +631,7 @@ static void qos_configure_streams(struct bt_bap_unicast_group *unicast_group,
 	do {
 		err = bt_bap_stream_qos(default_conn, unicast_group);
 		if (err == -EBUSY) {
-			k_sleep(BAP_STREAM_RETRY_WAIT);
+			k_sleep(BAP_RETRY_WAIT);
 		} else if (err != 0) {
 			FAIL("Unable to QoS configure streams: %d\n", err);
 			return;
@@ -641,6 +640,23 @@ static void qos_configure_streams(struct bt_bap_unicast_group *unicast_group,
 
 	while (atomic_get(&flag_stream_qos_configured) != stream_cnt) {
 		(void)k_sleep(K_MSEC(1));
+	}
+
+	err = bt_bap_unicast_group_get_info(unicast_group, &info);
+	if (err != 0) {
+		FAIL("Unable to QoS configure streams: %d\n", err);
+		return;
+	}
+
+	if (info.sink_pd != preset_16_2_1.qos.pd) {
+		FAIL("Unexpected sink PD %u (expected %u)\n", info.sink_pd, preset_16_2_1.qos.pd);
+		return;
+	}
+
+	if (info.source_pd != preset_16_2_1.qos.pd) {
+		FAIL("Unexpected source PD %u (expected %u)\n", info.source_pd,
+		     preset_16_2_1.qos.pd);
+		return;
 	}
 }
 
@@ -653,7 +669,7 @@ static int enable_stream(struct bt_bap_stream *stream)
 	do {
 		err = bt_bap_stream_enable(stream, NULL, 0);
 		if (err == -EBUSY) {
-			k_sleep(BAP_STREAM_RETRY_WAIT);
+			k_sleep(BAP_RETRY_WAIT);
 		} else if (err != 0) {
 			FAIL("Could not enable stream %p: %d\n", stream, err);
 			return err;
@@ -692,7 +708,7 @@ static int metadata_update_stream(struct bt_bap_stream *stream)
 	do {
 		err = bt_bap_stream_metadata(stream, new_meta, ARRAY_SIZE(new_meta));
 		if (err == -EBUSY) {
-			k_sleep(BAP_STREAM_RETRY_WAIT);
+			k_sleep(BAP_RETRY_WAIT);
 		} else if (err != 0) {
 			FAIL("Could not metadata update stream %p: %d\n", stream, err);
 			return err;
@@ -786,7 +802,7 @@ static int start_stream(struct bt_bap_stream *stream)
 	do {
 		err = bt_bap_stream_start(stream);
 		if (err == -EBUSY) {
-			k_sleep(BAP_STREAM_RETRY_WAIT);
+			k_sleep(BAP_RETRY_WAIT);
 		} else if (err != 0) {
 			FAIL("Could not start stream %p: %d\n", stream, err);
 			return err;
@@ -851,7 +867,7 @@ static void disable_streams(size_t stream_cnt)
 			err = bt_bap_stream_disable(
 				bap_stream_from_audio_test_stream(&test_streams[i]));
 			if (err == -EBUSY) {
-				k_sleep(BAP_STREAM_RETRY_WAIT);
+				k_sleep(BAP_RETRY_WAIT);
 			} else if (err != 0) {
 				FAIL("Could not disable stream: %d\n", err);
 				return;
@@ -885,7 +901,7 @@ static void stop_streams(size_t stream_cnt)
 		do {
 			err = bt_bap_stream_stop(source_stream);
 			if (err == -EBUSY) {
-				k_sleep(BAP_STREAM_RETRY_WAIT);
+				k_sleep(BAP_RETRY_WAIT);
 			} else if (err != 0) {
 				FAIL("Could not stop stream: %d\n", err);
 				return;
@@ -911,7 +927,7 @@ static void release_streams(size_t stream_cnt)
 			err = bt_bap_stream_release(
 				bap_stream_from_audio_test_stream(&test_streams[i]));
 			if (err == -EBUSY) {
-				k_sleep(BAP_STREAM_RETRY_WAIT);
+				k_sleep(BAP_RETRY_WAIT);
 			} else if (err != 0) {
 				FAIL("Could not release stream: %d\n", err);
 				return;

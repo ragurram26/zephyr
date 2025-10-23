@@ -50,8 +50,6 @@ LOG_MODULE_REGISTER(bt_bap_broadcast_assistant, CONFIG_BT_BAP_BROADCAST_ASSISTAN
 
 #include "audio_internal.h"
 #include "bap_internal.h"
-#include "../host/conn_internal.h"
-#include "../host/hci_core.h"
 
 #define MINIMUM_RECV_STATE_LEN          15
 
@@ -210,12 +208,30 @@ static bool past_available(const struct bt_conn *conn,
 			   uint8_t sid)
 {
 	if (IS_ENABLED(CONFIG_BT_PER_ADV_SYNC_TRANSFER_SENDER)) {
-		LOG_DBG("%p remote %s PAST, local %s PAST", (void *)conn,
-			BT_FEAT_LE_PAST_RECV(conn->le.features) ? "supports" : "does not support",
-			BT_FEAT_LE_PAST_SEND(bt_dev.le.features) ? "supports" : "does not support");
+		struct bt_le_local_features local_features;
+		struct bt_conn_remote_info remote_info;
+		int err;
 
-		return BT_FEAT_LE_PAST_RECV(conn->le.features) &&
-		       BT_FEAT_LE_PAST_SEND(bt_dev.le.features) &&
+		err = bt_le_get_local_features(&local_features);
+		if (err != 0) {
+			LOG_DBG("Failed to get local features: %d", err);
+			return false;
+		}
+
+		err = bt_conn_get_remote_info(conn, &remote_info);
+		if (err != 0) {
+			LOG_DBG("Failed to get remote info: %d", err);
+			return false;
+		}
+
+		LOG_DBG("%p remote %s PAST, local %s PAST", (void *)conn,
+			BT_FEAT_LE_PAST_RECV(remote_info.le.features) ? "supports"
+								      : "does not support",
+			BT_FEAT_LE_PAST_SEND(local_features.features) ? "supports"
+								      : "does not support");
+
+		return BT_FEAT_LE_PAST_RECV(remote_info.le.features) &&
+		       BT_FEAT_LE_PAST_SEND(local_features.features) &&
 		       bt_le_per_adv_sync_lookup_addr(adv_addr, sid) != NULL;
 	} else {
 		return false;
@@ -379,7 +395,7 @@ static uint8_t broadcast_assistant_bap_ntf_read_func(struct bt_conn *conn, uint8
 		return BT_GATT_ITER_STOP;
 	}
 
-	LOG_DBG("conn %p err 0x%02x len %u", conn, err, length);
+	LOG_DBG("conn %p err 0x%02x len %u", (void *)conn, err, length);
 
 	if (err) {
 		LOG_DBG("Failed to read: %u", err);
@@ -428,7 +444,7 @@ static void long_bap_read(struct bt_conn *conn, uint16_t handle)
 	}
 
 	if (atomic_test_and_set_bit(inst->flags, BAP_BA_FLAG_BUSY)) {
-		LOG_DBG("conn %p", conn);
+		LOG_DBG("conn %p", (void *)conn);
 
 		/* If the client is busy reading reschedule the long read */
 		struct bt_conn_info conn_info;
@@ -565,7 +581,7 @@ static uint8_t read_recv_state_cb(struct bt_conn *conn, uint8_t err,
 
 	(void)memset(params, 0, sizeof(*params));
 
-	LOG_DBG("%s receive state", active_recv_state ? "Active " : "Inactive");
+	LOG_DBG("%s receive state", active_recv_state ? "Active" : "Inactive");
 
 	if (cb_err == 0 && active_recv_state) {
 		int16_t index;
@@ -690,14 +706,20 @@ static uint8_t char_discover_func(struct bt_conn *conn,
 		} else if (bt_uuid_cmp(chrc->uuid, BT_UUID_BASS_RECV_STATE) == 0) {
 			if (inst->recv_state_cnt <
 				CONFIG_BT_BAP_BROADCAST_ASSISTANT_RECV_STATE_COUNT) {
-				uint8_t idx = inst->recv_state_cnt++;
+				const uint8_t idx = inst->recv_state_cnt;
 
 				LOG_DBG("Receive State %u", inst->recv_state_cnt);
 				inst->recv_state_handles[idx] =
 					attr->handle + 1;
 				sub_params = &inst->recv_state_sub_params[idx];
 				sub_params->disc_params = &inst->recv_state_disc_params[idx];
+				inst->recv_state_cnt++;
 			}
+		} else {
+			LOG_DBG("Invalid UUID %s", bt_uuid_str(chrc->uuid));
+			bap_broadcast_assistant_discover_complete(conn, -EBADMSG, 0);
+
+			return BT_GATT_ITER_STOP;
 		}
 
 		if (sub_params != NULL) {
@@ -1251,6 +1273,30 @@ static bool bis_syncs_unique_or_no_pref(uint32_t requested_bis_syncs, uint32_t a
 	return (requested_bis_syncs & aggregated_bis_syncs) != 0U;
 }
 
+static bool valid_bis_sync_request(uint32_t requested_bis_syncs, uint32_t aggregated_bis_syncs)
+{
+	/* Verify that the request BIS sync indexes are unique or no preference */
+	if (!bis_syncs_unique_or_no_pref(requested_bis_syncs, aggregated_bis_syncs)) {
+		LOG_DBG("Duplicate BIS index 0x%08x (aggregated %x)", requested_bis_syncs,
+			aggregated_bis_syncs);
+		return false;
+	}
+
+	if (requested_bis_syncs != BT_BAP_BIS_SYNC_NO_PREF &&
+	    aggregated_bis_syncs == BT_BAP_BIS_SYNC_NO_PREF) {
+		LOG_DBG("Invalid BIS index 0x%08X mixing BT_BAP_BIS_SYNC_NO_PREF and specific BIS",
+			requested_bis_syncs);
+		return false;
+	}
+
+	if (!valid_bis_syncs(requested_bis_syncs)) {
+		LOG_DBG("Invalid BIS sync: 0x%08X", requested_bis_syncs);
+		return false;
+	}
+
+	return true;
+}
+
 static bool valid_subgroup_params(uint8_t pa_sync, const struct bt_bap_bass_subgroup subgroups[],
 				  uint8_t num_subgroups)
 {
@@ -1268,17 +1314,14 @@ static bool valid_subgroup_params(uint8_t pa_sync, const struct bt_bap_bass_subg
 		}
 
 		/* Verify that the request BIS sync indexes are unique or no preference */
-		if (!bis_syncs_unique_or_no_pref(subgroups[i].bis_sync, aggregated_bis_syncs)) {
-			LOG_DBG("[%u]: Duplicate BIS index 0x%08x (aggregated 0x%08x)", i,
-				subgroups[i].bis_sync, aggregated_bis_syncs);
+		if (!valid_bis_sync_request(subgroups[i].bis_sync, aggregated_bis_syncs)) {
+			LOG_DBG("Invalid BIS Sync request[%d]", i);
 
 			return false;
 		}
 
 		/* Keep track of BIS sync values to ensure that we do not have duplicates */
-		if (subgroups[i].bis_sync != BT_BAP_BIS_SYNC_NO_PREF) {
-			aggregated_bis_syncs |= subgroups[i].bis_sync;
-		}
+		aggregated_bis_syncs |= subgroups[i].bis_sync;
 
 #if defined(CONFIG_BT_AUDIO_CODEC_CFG_MAX_METADATA_SIZE)
 		if (subgroups[i].metadata_len > CONFIG_BT_AUDIO_CODEC_CFG_MAX_METADATA_SIZE) {
@@ -1364,7 +1407,9 @@ int bt_bap_broadcast_assistant_add_src(struct bt_conn *conn,
 	/* Check if this operation would result in a duplicate before proceeding */
 	if (broadcast_src_is_duplicate(inst, param->broadcast_id, param->adv_sid,
 				       param->addr.type)) {
-		LOG_DBG("Broadcast source already exists");
+		LOG_DBG("Broadcast source already exists for broadcast_id 0x%06X, sid 0x%02X and "
+			"type 0x%02X",
+			param->broadcast_id, param->adv_sid, param->addr.type);
 
 		return -EINVAL;
 	}

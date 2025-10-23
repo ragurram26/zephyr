@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2017 Linaro Limited
  * Copyright (c) 2019 Intel Corporation
+ * Copyright (c) 2024 Embeint Inc
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -9,6 +10,7 @@
 LOG_MODULE_REGISTER(net_sntp, CONFIG_SNTP_LOG_LEVEL);
 
 #include <zephyr/net/sntp.h>
+#include <zephyr/sys/clock.h>
 #include "sntp_pkt.h"
 #include <limits.h>
 
@@ -181,27 +183,39 @@ int sntp_init(struct sntp_ctx *ctx, struct sockaddr *addr, socklen_t addr_len)
 	return 0;
 }
 
-int sntp_query(struct sntp_ctx *ctx, uint32_t timeout, struct sntp_time *ts)
+static int sntp_query_send(struct sntp_ctx *ctx)
 {
 	struct sntp_pkt tx_pkt = { 0 };
-	int ret = 0;
-	int64_t ts_us = 0;
+	struct timespec ts;
+	int ret;
 
-	if (!ctx || !ts) {
-		return -EFAULT;
+	ret = sys_clock_gettime(SYS_CLOCK_REALTIME, &ts);
+	if (ret < 0) {
+		return ret;
 	}
 
 	/* prepare request pkt */
 	tx_pkt.li = 0;
 	tx_pkt.vn = SNTP_VERSION_NUMBER;
 	tx_pkt.mode = SNTP_MODE_CLIENT;
-	ts_us = k_ticks_to_us_near64(k_uptime_ticks());
-	ctx->expected_orig_ts.seconds = ts_us / USEC_PER_SEC;
-	ctx->expected_orig_ts.fraction = (ts_us % USEC_PER_SEC) * (UINT32_MAX / USEC_PER_SEC);
+	ctx->expected_orig_ts.seconds = (uint32_t)(ts.tv_sec + OFFSET_1970_JAN_1);
+	ctx->expected_orig_ts.fraction =
+		(uint32_t)((uint64_t)ts.tv_nsec * UINT32_MAX / NSEC_PER_SEC);
 	tx_pkt.tx_tm_s = htonl(ctx->expected_orig_ts.seconds);
 	tx_pkt.tx_tm_f = htonl(ctx->expected_orig_ts.fraction);
 
-	ret = zsock_send(ctx->sock.fd, (uint8_t *)&tx_pkt, sizeof(tx_pkt), 0);
+	return zsock_send(ctx->sock.fd, (uint8_t *)&tx_pkt, sizeof(tx_pkt), 0);
+}
+
+int sntp_query(struct sntp_ctx *ctx, uint32_t timeout, struct sntp_time *ts)
+{
+	int ret = 0;
+
+	if (!ctx || !ts) {
+		return -EFAULT;
+	}
+
+	ret = sntp_query_send(ctx);
 	if (ret < 0) {
 		NET_ERR("Failed to send over UDP socket %d", ret);
 		return ret;
@@ -248,3 +262,76 @@ void sntp_close(struct sntp_ctx *ctx)
 		(void)zsock_close(ctx->sock.fd);
 	}
 }
+
+#ifdef CONFIG_NET_SOCKETS_SERVICE
+
+int sntp_init_async(struct sntp_ctx *ctx, struct sockaddr *addr, socklen_t addr_len,
+		    const struct net_socket_service_desc *service)
+{
+	int ret;
+
+	/* Validate service pointer */
+	if (service == NULL) {
+		return -EFAULT;
+	}
+	/* Standard init */
+	ret = sntp_init(ctx, addr, addr_len);
+	if (ret < 0) {
+		return ret;
+	}
+	/* Attach socket to socket service */
+	ret = net_socket_service_register(service, ctx->sock.fds, ctx->sock.nfds, ctx);
+	if (ret < 0) {
+		NET_ERR("Failed to register socket %d", ret);
+		/* Cleanup init on register failure*/
+		sntp_close(ctx);
+	}
+	return ret;
+}
+
+int sntp_send_async(struct sntp_ctx *ctx)
+{
+	int ret = 0;
+
+	if (!ctx) {
+		return -EFAULT;
+	}
+
+	ret = sntp_query_send(ctx);
+	if (ret < 0) {
+		NET_ERR("Failed to send over UDP socket %d", ret);
+		return ret;
+	}
+	return 0;
+}
+
+int sntp_read_async(struct net_socket_service_event *event, struct sntp_time *ts)
+{
+	struct sntp_ctx *ctx = event->user_data;
+	struct sntp_pkt buf = {0};
+	int rcvd;
+
+	rcvd = zsock_recv(ctx->sock.fd, (uint8_t *)&buf, sizeof(buf), 0);
+	if (rcvd < 0) {
+		return -errno;
+	}
+
+	if (rcvd != sizeof(struct sntp_pkt)) {
+		return -EMSGSIZE;
+	}
+
+	return parse_response((uint8_t *)&buf, sizeof(buf), &ctx->expected_orig_ts, ts);
+}
+
+void sntp_close_async(const struct net_socket_service_desc *service)
+{
+	struct sntp_ctx *ctx = service->pev->user_data;
+	/* Detach socket from socket service */
+	net_socket_service_unregister(service);
+	/* CLose the socket */
+	if (ctx) {
+		(void)zsock_close(ctx->sock.fd);
+	}
+}
+
+#endif /* CONFIG_NET_SOCKETS_SERVICE */

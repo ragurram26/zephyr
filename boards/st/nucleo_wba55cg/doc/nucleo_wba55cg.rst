@@ -144,42 +144,10 @@ More information about STM32WBA series can be found here:
 Supported Features
 ==================
 
-The Zephyr nucleo_wba55cg board configuration supports the following hardware features:
+.. zephyr:board-supported-hw::
 
-+-----------+------------+-------------------------------------+
-| Interface | Controller | Driver/Component                    |
-+===========+============+=====================================+
-| NVIC      | on-chip    | nested vector interrupt controller  |
-+-----------+------------+-------------------------------------+
-| UART      | on-chip    | serial port-polling;                |
-|           |            | serial port-interrupt               |
-+-----------+------------+-------------------------------------+
-| PINMUX    | on-chip    | pinmux                              |
-+-----------+------------+-------------------------------------+
-| GPIO      | on-chip    | gpio                                |
-+-----------+------------+-------------------------------------+
-| I2C       | on-chip    | i2c                                 |
-+-----------+------------+-------------------------------------+
-| SPI       | on-chip    | spi                                 |
-+-----------+------------+-------------------------------------+
-| ADC       | on-chip    | adc                                 |
-+-----------+------------+-------------------------------------+
-| WATCHDOG  | on-chip    | independent watchdog                |
-+-----------+------------+-------------------------------------+
-| RNG       | on-chip    | True Random number generator        |
-+-----------+------------+-------------------------------------+
-| RADIO     | on-chip    | Bluetooth Low Energy                |
-+-----------+------------+-------------------------------------+
-| RTC       | on-chip    | rtc                                 |
-+-----------+------------+-------------------------------------+
-
-Other hardware features are not yet supported on this Zephyr port.
-
-The default configuration can be found in the defconfig file:
-:zephyr_file:`boards/st/nucleo_wba55cg/nucleo_wba55cg_defconfig`
-
-Bluetooh support
-----------------
+Bluetooth support
+-----------------
 
 BLE support is enabled on nucleo_wba55cg. To build a zephyr sample using this board
 you first need to install Bluetooth Controller libraries available in Zephyr as binary
@@ -227,6 +195,8 @@ Default settings are 115500 8N1.
 
 Programming and Debugging
 *************************
+
+.. zephyr:board-supported-runners::
 
 Nucleo WBA55CG board includes an ST-LINK/V3 embedded debug tool interface.
 It could be used for flash and debug using either OpenOCD or STM32Cube ecosystem tools.

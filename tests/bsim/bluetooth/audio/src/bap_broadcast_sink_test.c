@@ -569,6 +569,7 @@ static void stream_started_cb(struct bt_bap_stream *stream)
 
 	memset(&test_stream->last_info, 0, sizeof(test_stream->last_info));
 	test_stream->rx_cnt = 0U;
+	test_stream->valid_rx_cnt = 0U;
 
 	err = bt_bap_ep_get_info(stream->ep, &info);
 	if (err != 0) {
@@ -800,7 +801,7 @@ static void test_broadcast_sync(const uint8_t broadcast_code[BT_ISO_BROADCAST_CO
 		return;
 	}
 
-	stream_sync_cnt = POPCOUNT(bis_index_bitfield);
+	stream_sync_cnt = sys_count_bits(&bis_index_bitfield, sizeof(bis_index_bitfield));
 }
 
 static void test_broadcast_sync_inval(void)

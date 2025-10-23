@@ -8,7 +8,8 @@
 
 /**
  * @file
- * @brief Controller Area Network (CAN) driver API.
+ * @brief Header file for Controller Area Network (CAN) controller driver API.
+ * @ingroup can_controller
  */
 
 #ifndef ZEPHYR_INCLUDE_DRIVERS_CAN_H_
@@ -28,11 +29,16 @@ extern "C" {
 #endif
 
 /**
- * @brief CAN Interface
- * @defgroup can_interface CAN Interface
+ * @brief Interfaces for Controller Area Network (CAN) controllers and transceivers
+ * @defgroup can_interface CAN
+ * @ingroup io_interfaces
+ *
+ * @defgroup can_controller CAN Controller
+ * @brief Interfaces for CAN controllers
+ * @ingroup can_interface
  * @since 1.12
  * @version 1.1.0
- * @ingroup io_interfaces
+ *
  * @{
  */
 
@@ -761,7 +767,8 @@ struct can_device_state {
 	Z_DEVICE_DEFINE(node_id, Z_DEVICE_DT_DEV_ID(node_id),		\
 			DEVICE_DT_NAME(node_id),			\
 			&UTIL_CAT(Z_DEVICE_DT_DEV_ID(node_id), _init),	\
-			pm, data, config, level, prio, api,		\
+			NULL, Z_DEVICE_DT_FLAGS(node_id), pm, data,	\
+			config,	level, prio, api,			\
 			&(Z_DEVICE_STATE_NAME(Z_DEVICE_DT_DEV_ID(node_id)).devstate), \
 			__VA_ARGS__)
 

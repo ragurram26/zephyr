@@ -153,48 +153,7 @@ More information about STM32U585AI can be found here:
 Supported Features
 ==================
 
-The Zephyr b_u585i_iot02a board configuration supports the following hardware features:
-
-+-----------+------------+-------------------------------------+
-| Interface | Controller | Driver/Component                    |
-+===========+============+=====================================+
-| NVIC      | on-chip    | nested vector interrupt controller  |
-+-----------+------------+-------------------------------------+
-| UART      | on-chip    | serial port-polling;                |
-|           |            | serial port-interrupt               |
-+-----------+------------+-------------------------------------+
-| PINMUX    | on-chip    | pinmux                              |
-+-----------+------------+-------------------------------------+
-| GPIO      | on-chip    | gpio                                |
-+-----------+------------+-------------------------------------+
-| RNG       | on-chip    | True Random number generator        |
-+-----------+------------+-------------------------------------+
-| I2C       | on-chip    | i2c                                 |
-+-----------+------------+-------------------------------------+
-| SPI       | on-chip    | spi                                 |
-+-----------+------------+-------------------------------------+
-| DAC       | on-chip    | dac                                 |
-+-----------+------------+-------------------------------------+
-| ADC       | on-chip    | adc                                 |
-+-----------+------------+-------------------------------------+
-| WATCHDOG  | on-chip    | independent watchdog                |
-+-----------+------------+-------------------------------------+
-| USB       | on-chip    | usb_device                          |
-+-----------+------------+-------------------------------------+
-| BKP SRAM  | on-chip    | Backup SRAM                         |
-+-----------+------------+-------------------------------------+
-| PWM       | on-chip    | pwm                                 |
-| die-temp  | on-chip    | die temperature sensor              |
-+-----------+------------+-------------------------------------+
-| AES       | on-chip    | crypto                              |
-+-----------+------------+-------------------------------------+
-| RADIO     | STM32WB5MMG| Bluetooth Low Energy (BLE)          |
-+-----------+------------+-------------------------------------+
-| RTC       | on-chip    | rtc                                 |
-+-----------+------------+-------------------------------------+
-
-The default configuration can be found in the defconfig file:
-:zephyr_file:`boards/st/b_u585i_iot02a/b_u585i_iot02a_defconfig`
+.. zephyr:board-supported-hw::
 
 Zephyr board options
 ====================
@@ -283,6 +242,8 @@ do it by removing ``SB6`` jumper on the back side of the board.
 Programming and Debugging
 *************************
 
+.. zephyr:board-supported-runners::
+
 B_U585I_IOT02A Discovery kit includes an ST-LINK/V3 embedded debug tool interface.
 This probe allows to flash the board using various tools.
 
@@ -345,7 +306,7 @@ To disable TrustZone, it's necessary to change AT THE SAME TIME the ``TZEN``
 and ``RDP`` bits. ``TZEN`` needs to get set from 1 to 0 and ``RDP``,
 needs to be set from ``DC`` to ``AA`` (step 3 below).
 
-This is docummented in the `AN5347, in section 9`_, "TrustZone deactivation".
+This is documented in the `AN5347, in section 9`_, "TrustZone deactivation".
 
 However, it's possible that the ``RDP`` bit is not yet set to ``DC``, so you
 first need to set it to ``DC`` (step 2).
